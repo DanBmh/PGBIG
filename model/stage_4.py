@@ -23,7 +23,7 @@ class MultiStageModel(Module):
         # self.seq_in = seq_in
         self.dct_n = opt.dct_n
         # ks = int((kernel_size + 1) / 2)
-        assert opt.kernel_size == 10
+        # assert opt.kernel_size == 10
 
         self.in_features = opt.in_features
         self.num_stage = opt.num_stage

@@ -58,7 +58,7 @@ def main(opt):
         dataset = datasets.Datasets(opt, split=0)
         print('>>> Training dataset length: {:d}'.format(dataset.__len__()))
         data_loader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        valid_dataset = datasets.Datasets(opt, split=2)
+        valid_dataset = datasets.Datasets(opt, split=1)
         print('>>> Validation dataset length: {:d}'.format(valid_dataset.__len__()))
         valid_loader = DataLoader(valid_dataset, batch_size=opt.test_batch_size, shuffle=True, num_workers=0,
                                   pin_memory=True)
@@ -113,6 +113,7 @@ def main(opt):
                            'state_dict': net_pred.state_dict(),
                            'optimizer': optimizer.state_dict()},
                           is_best=is_best, opt=opt)
+            torch.cuda.empty_cache()
 
 def eval(opt):
     lr_now = opt.lr_now
@@ -174,6 +175,7 @@ def smooth(src, sample_len, kernel_size):
     for i in range(kernel_size, sample_len):
         smooth_data[:, i] = torch.mean(src_data[:, kernel_size:i+1], dim=1)
     return smooth_data
+
 def run_model(net_pred, optimizer=None, is_train=0, data_loader=None, epo=1, opt=None):
     if is_train == 0:
         net_pred.train()
