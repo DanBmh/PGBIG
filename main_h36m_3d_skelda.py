@@ -14,7 +14,7 @@ import time
 import torch.optim as optim
 import tqdm
 
-sys.path.append("/PoseForecaster/")
+sys.path.append("/PoseForecasters/")
 import utils_pipeline
 
 # ==================================================================================================
