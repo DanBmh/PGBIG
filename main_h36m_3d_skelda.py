@@ -14,39 +14,41 @@ import time
 import torch.optim as optim
 import tqdm
 
-sys.path.append("/PoseForecasters/")
-import utils_pipeline
-
-# ==================================================================================================
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device: %s" % device)
 
-datapath_save_out = "/datasets/preprocessed/human36m/{}_forecast_kppspose.json"
-config = {
+# ==================================================================================================
+
+sys.path.append("/PoseForecasters/")
+import utils_pipeline
+
+sconfig = {
     "item_step": 2,
     "window_step": 2,
-    # "input_n": 50,
-    "input_n": 10,
+    "input_n": 50,
     "output_n": 25,
     "select_joints": [
-        "hip_middle",
         "hip_right",
-        "knee_right",
-        "ankle_right",
         "hip_left",
+        "knee_right",
         "knee_left",
+        "ankle_right",
         "ankle_left",
         "nose",
-        "shoulder_left",
-        "elbow_left",
-        "wrist_left",
         "shoulder_right",
+        "shoulder_left",
         "elbow_right",
+        "elbow_left",
         "wrist_right",
-        "shoulder_middle",
+        "wrist_left",
     ],
 }
+
+datasets_train = [
+    "/datasets/preprocessed/human36m/train_forecast_rpt.json",
+]
+
+dataset_eval_test = "/datasets/preprocessed/human36m/{}_forecast_rpt.json"
 
 
 # ==================================================================================================
@@ -57,6 +59,9 @@ def prepare_sequences(batch, batch_size: int, split: str, device):
 
     # Merge joints and coordinates to a single dimension
     sequences = sequences.reshape([batch_size, sequences.shape[1], -1])
+
+    # Convert to millimeters
+    sequences = sequences * 1000
 
     sequences = torch.from_numpy(sequences).to(device)
 
@@ -102,22 +107,23 @@ def main(opt):
     # Load preprocessed datasets
     print("Loading datasets ...")
     dataset_train, dlen_train = utils_pipeline.load_dataset(
-        datapath_save_out, "train", config
+        datasets_train[0], "train", sconfig
     )
-    esplit = "test" if "mocap" in datapath_save_out else "eval"
-
     dataset_eval, dlen_eval = utils_pipeline.load_dataset(
-        datapath_save_out, esplit, config
+        dataset_eval_test.format("eval"), "eval", sconfig
     )
     dataset_test, dlen_test = utils_pipeline.load_dataset(
-        datapath_save_out, "test", config
+        dataset_eval_test.format("test"), "test", sconfig
     )
+    dataset_train = dataset_train["sequences"]
+    dataset_eval = dataset_eval["sequences"]
+    dataset_test = dataset_test["sequences"]
 
     # evaluation
     if opt.is_eval:
         # Load preprocessed datasets
         label_gen_test = utils_pipeline.create_labels_generator(
-            dataset_test["sequences"], config
+            dataset_test, sconfig
         )
 
         stime = time.time()
@@ -144,13 +150,13 @@ def main(opt):
             print(">>> training epoch: {:d}".format(epo))
 
             label_gen_train = utils_pipeline.create_labels_generator(
-                dataset_train["sequences"], config
+                dataset_train, sconfig
             )
             label_gen_eval = utils_pipeline.create_labels_generator(
-                dataset_eval["sequences"], config
+                dataset_eval, sconfig
             )
             label_gen_test = utils_pipeline.create_labels_generator(
-                dataset_test["sequences"], config
+                dataset_test, sconfig
             )
 
             ret_train = run_model(
@@ -229,11 +235,10 @@ def eval(opt):
 
     # Load preprocessed dataset
     dataset_test, dlen_test = utils_pipeline.load_dataset(
-        datapath_save_out, "test", config
+        dataset_eval_test.format("test"), "test", sconfig
     )
-    label_gen_test = utils_pipeline.create_labels_generator(
-        dataset_test["sequences"], config
-    )
+    dataset_test = dataset_test["sequences"]
+    label_gen_test = utils_pipeline.create_labels_generator(dataset_test, sconfig)
 
     stime = time.time()
     ret_test = run_model(
